@@ -1,0 +1,80 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.optimize import minimize
+
+# Function to model the temperature distribution based on the one-dimensional heat equation
+def heat_equation_model(x, alpha, t, Tmax, Tmin, L):
+    return (Tmax - Tmin) * np.exp(-alpha * np.pi**2 * t / L**2) * np.sin(np.pi * x / L) + Tmin
+
+# Function to compute the second partial derivative with respect to space at all points along the rod
+def second_derivative_space(alpha, t, x, Tmax, Tmin, L):
+    return ((Tmax - Tmin) * np.pi / L)**2 * np.exp(-alpha * np.pi**2 * t / L**2) * np.sin(np.pi * x / L)
+
+# Generate synthetic experimental data
+def generate_synthetic_data(alpha_true, Tmax, Tmin, L, num_points=100, num_times=1):
+    x = np.linspace(0, 1, num_points)
+    time_points = np.linspace(0, 5, num_times)
+    synthetic_data = []
+
+    for t in time_points:
+        noise = np.random.normal(0, 2, size=num_points)  # Adding some random noise
+        temperature = heat_equation_model(x, alpha_true, t, Tmax, Tmin, L) + noise
+        synthetic_data.append(temperature)
+
+    return x, time_points, np.array(synthetic_data)
+
+# Objective function to minimize (difference between simulated and experimental data)
+def objective_function(alpha_values, x_data, time_data, experimental_data, Tmax_true, Tmin_true, L_true):
+    total_difference = 0
+
+    for t_index, t in enumerate(time_data):
+        alpha = alpha_values
+        simulated_data = heat_equation_model(x_data, alpha, t, Tmax_true, Tmin_true, L_true)
+        total_difference += np.sum((simulated_data - experimental_data[t_index])**2)
+
+    return total_difference
+
+# Initial parameters
+Tmax_true = 60
+Tmin_true = 10
+L_true = 1.0
+alpha_guess = 0.02  # Initial guess for alpha_true
+
+# Generate synthetic data using the initial guess for alpha
+x_data, time_data, experimental_data = generate_synthetic_data(alpha_guess, Tmax_true, Tmin_true, L_true)
+
+print(x_data.shape)
+print(time_data.shape)
+p1, p2 = np.meshgrid(x_data, time_data)
+fig = plt.gcf()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(p1, p2, experimental_data)
+ax.legend()
+plt.show()
+ax.cla()
+breakpoint()
+
+# Optimize to find the best alpha_true that minimizes the difference
+result = minimize(objective_function, alpha_guess, bounds=[(0, None)], args=(x_data, time_data, experimental_data, Tmax_true, Tmin_true, L_true))
+alpha_estimate = result.x[0]
+
+# Print the estimated thermal diffusivity
+print(f"Estimated Thermal Diffusivity: {alpha_estimate}")
+
+# Plot the simulated and experimental data for visualization
+fig = plt.figure(figsize=(12, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+for t_index, t in enumerate(time_data):
+    simulated_data = heat_equation_model(x_data, alpha_estimate, t, Tmax_true, Tmin_true, L_true)
+    ax.plot(x_data, t * np.ones_like(x_data), simulated_data, label=f'Time t={t:.2f}', linestyle='dashed')
+
+ax.scatter(x_data, time_data, experimental_data, color='red', marker='o', label='Experimental Data')
+
+ax.set_xlabel('Position (x)')
+ax.set_ylabel('Time')
+ax.set_zlabel('Temperature')
+ax.set_title('Simulated vs Experimental Data')
+ax.legend()
+plt.show()
