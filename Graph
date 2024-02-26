@@ -1,0 +1,39 @@
+import matplotlib.pyplot as plt
+from matplotlib import style
+import numpy as np
+from statistics import mean
+
+from matplotlib.axis import Axis
+from matplotlib.widgets import Slider, Button, RadioButtons
+
+qvc = np.array([4.82e-28, 8.91e-28, 6.61e-28], dtype=np.float64)
+qvcuncert = np.array([1.07e-29, 1.07e-29, 1.07e-29], dtype=np.float64)
+recipwave = np.array([1523154.621, 2256241.343, 1850000], dtype=np.float64)
+recipwauncert = np.array([18938292.32, 15228387.86, 18480937.57], dtype=np.float64)
+runcert = np.array([122503.1252, 334285.2209, 185190.8209], dtype=np.float64)
+def best_fit_slope(recipwave,qvc):
+    m = (((mean(recipwave)*mean(qvc))- mean(recipwave*qvc)) /
+         ((mean(recipwave)*mean(recipwave))-mean(recipwave*recipwave)))
+
+    b = mean(qvc) - m*mean(recipwave)
+
+    return m, b
+m, b = best_fit_slope(recipwave, qvc)
+
+regression_line = [(m*x)+b for x in recipwave]
+
+a, b = np.polyfit(recipwave, qvc, 1)
+
+print(best_fit_slope(recipwave, qvc))
+plt.scatter(recipwave, qvc, label='data', color='red')
+plt.plot(recipwave, regression_line, label='Regression Line')
+plt.text(2.27e6, 5.32e-28, 'Regression line: y = 5.58e-34x + -3.69e-28')
+plt.title('How the Energy of a Photon Traveling at the Speed of Light is Affected by the Wavelength')
+plt.legend(loc=4)
+plt.xlabel('Reciprocal of the Wavelength, 1/λ, (m^-1)')
+plt.ylabel('Charge, q, multiplied by the Threshold Voltage, V, divided by the Speed of Light,c, (J s m^-1)')
+#plt.plot(recipwave, a*recipwave+b, linestyle='--', linewidth=2)
+#plt.text(1.9e7, 9e-28, 'y = ' + '{:.2f}'.format(b) + ' + {:.2f}'.format(a) + 'x', size=14)
+plt.errorbar(recipwave, qvc, xerr=runcert, yerr=qvcuncert, fmt='o', color='red', label='Error Bars')
+plt.show()
+
